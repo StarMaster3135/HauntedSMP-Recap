@@ -1,0 +1,941 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>HauntedSMP Recap</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://html2canvas.hertzen.com/dist/html2canvas.min.js"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;700;900&display=swap" rel="stylesheet">
+    
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body {
+            font-family: 'Outfit', sans-serif;
+            background-color: #000;
+            color: white;
+            overflow: hidden;
+            height: 100dvh; 
+            user-select: none;
+            -webkit-user-select: none;
+        }
+
+        /* --- ANIMATIONS --- */
+        @keyframes float { 0%, 100% { transform: translateY(0px); } 50% { transform: translateY(-15px); } }
+        @keyframes popIn { 0% { transform: scale(0); opacity: 0; } 70% { transform: scale(1.1); } 100% { transform: scale(1); opacity: 1; } }
+        @keyframes slideUp { from { transform: translateY(50px); opacity: 0; } to { transform: translateY(0); opacity: 1; } }
+        @keyframes spinSlow { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }
+        @keyframes pulseGlow { 0%, 100% { box-shadow: 0 0 10px rgba(100, 200, 255, 0.4); } 50% { box-shadow: 0 0 25px rgba(100, 200, 255, 0.8); } }
+        @keyframes shake { 0%, 100% { transform: translateX(0); } 10%, 30%, 50%, 70%, 90% { transform: translateX(-5px); } 20%, 40%, 60%, 80% { transform: translateX(5px); } }
+        @keyframes slideInLeft { from { transform: translateX(-50px); opacity: 0; } to { transform: translateX(0); opacity: 1; } }
+        @keyframes slideInRight { from { transform: translateX(50px); opacity: 0; } to { transform: translateX(0); opacity: 1; } }
+        @keyframes scaleRotate { from { transform: scale(0) rotate(-180deg); opacity: 0; } to { transform: scale(1) rotate(0deg); opacity: 1; } }
+        @keyframes bounceIn { 0% { transform: scale(0.3); opacity: 0; } 50% { transform: scale(1.05); } 70% { transform: scale(0.9); } 100% { transform: scale(1); opacity: 1; } }
+
+        .animate-float { animation: float 6s ease-in-out infinite; }
+        .animate-pop { animation: popIn 0.6s cubic-bezier(0.175, 0.885, 0.32, 1.275) forwards; }
+        .animate-up { animation: slideUp 0.8s ease-out forwards; }
+        .animate-spin-slow { animation: spinSlow 20s linear infinite; }
+        .animate-pulse-glow { animation: pulseGlow 2s infinite alternate; }
+        .animate-shake { animation: shake 0.5s ease-in-out; }
+        .animate-slide-left { animation: slideInLeft 0.8s ease-out forwards; }
+        .animate-slide-right { animation: slideInRight 0.8s ease-out forwards; }
+        .animate-scale-rotate { animation: scaleRotate 0.8s cubic-bezier(0.68, -0.55, 0.265, 1.55) forwards; }
+        .animate-bounce-in { animation: bounceIn 0.8s cubic-bezier(0.68, -0.55, 0.265, 1.55) forwards; }
+        
+        .delay-100 { animation-delay: 100ms; }
+        .delay-200 { animation-delay: 200ms; }
+        .delay-300 { animation-delay: 300ms; }
+        .delay-400 { animation-delay: 400ms; }
+        .delay-500 { animation-delay: 500ms; }
+
+        .glass-card {
+            background: rgba(255, 255, 255, 0.05);
+            backdrop-filter: blur(12px);
+            -webkit-backdrop-filter: blur(12px);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            box-shadow: 0 4px 30px rgba(0, 0, 0, 0.1);
+        }
+        
+        .stat-huge {
+            font-size: clamp(3rem, 12vw, 8rem); 
+            line-height: 1;
+            font-weight: 900;
+            letter-spacing: -0.05em;
+        }
+
+        .slide {
+            position: absolute;
+            inset: 0;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: transform 0.6s cubic-bezier(0.25, 1, 0.5, 1), opacity 0.6s ease;
+            opacity: 0;
+            z-index: 0;
+            pointer-events: none;
+            overflow: hidden;
+            padding: 1rem; 
+        }
+
+        .slide.active { transform: translateY(0) scale(1); opacity: 1; z-index: 10; pointer-events: auto; }
+        .slide.prev { transform: translateY(-100%) scale(0.95); opacity: 0; z-index: 5; }
+        .slide.next { transform: translateY(100%) scale(0.95); opacity: 0; z-index: 5; }
+
+        .grain {
+            position: fixed;
+            inset: 0;
+            background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noiseFilter'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.1' numOctaves='1' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noiseFilter)' opacity='0.03'/%3E%3C/svg%3E");
+            pointer-events: none;
+            z-index: 100;
+        }
+    </style>
+</head>
+<body>
+
+    <div class="grain"></div>
+
+    <audio id="bg-music" loop>
+        <source src="https://cdn.pixabay.com/download/audio/2025/11/15/audio_8fe5ad2b83.mp3" type="audio/mpeg">
+    </audio>
+    <audio id="sfx-slide">
+        <source src="https://cdn.pixabay.com/download/audio/2025/08/02/audio_8b2071fb75.mp3" type="audio/mpeg">
+    </audio>
+    <audio id="sfx-click">
+        <source src="https://cdn.pixabay.com/download/audio/2025/08/15/audio_ef53277d11.mp3" type="audio/mpeg">
+    </audio>
+
+    <div id="app" class="relative w-full h-full">
+        
+        <button id="mute-btn" onclick="toggleMute()" class="fixed top-4 right-4 z-[100] w-10 h-10 rounded-full bg-black/50 text-white backdrop-blur-md border border-white/20 flex items-center justify-center hover:bg-white/20 transition-all">
+            <i class="fa-solid fa-volume-high"></i>
+        </button>
+
+        <div id="login-screen" class="absolute inset-0 z-50 flex flex-col items-center justify-center bg-black transition-opacity duration-700 px-4">
+            <div class="absolute inset-0 overflow-hidden opacity-30 pointer-events-none">
+                <div class="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[300px] md:w-[800px] h-[300px] md:h-[800px] bg-purple-600 rounded-full blur-[80px] md:blur-[120px] animate-pulse"></div>
+                <div class="absolute top-0 right-0 w-[200px] md:w-[600px] h-[200px] md:h-[600px] bg-blue-600 rounded-full blur-[60px] md:blur-[100px] opacity-60"></div>
+            </div>
+
+            <div class="glass-card p-8 md:p-12 rounded-3xl max-w-lg w-full text-center relative z-10 animate-up">
+                <i class="fa-solid fa-ghost text-5xl md:text-6xl text-purple-300 mb-6 animate-float"></i>
+                <h1 class="text-4xl md:text-6xl font-black text-white mb-2 tracking-tighter">HauntedSMP</h1>
+                <p class="text-purple-200 uppercase tracking-[0.2em] md:tracking-[0.4em] text-xs md:text-sm mb-8 md:mb-10 font-bold">Season 5 Recap</p>
+
+                <div class="space-y-4">
+                    <input type="text" id="username-input" placeholder="Enter Minecraft Username" 
+                        class="w-full bg-white/10 border border-white/20 p-4 md:p-5 rounded-xl text-center text-lg md:text-xl text-white placeholder-white/40 focus:outline-none focus:bg-white/20 focus:border-purple-400 transition-all">
+                    
+                    <button onclick="attemptAutoLoad()" 
+                        class="w-full bg-white text-black font-black py-4 md:py-5 rounded-xl text-lg hover:scale-[1.02] hover:bg-purple-50 transition-all shadow-xl flex items-center justify-center gap-2 active:scale-95">
+                        START RECAP <i class="fa-solid fa-play text-xs"></i>
+                    </button>
+                </div>
+                <p id="error-msg" class="text-red-400 text-sm mt-6 hidden font-bold bg-red-900/20 py-2 rounded-lg"></p>
+            </div>
+        </div>
+
+        <div id="slides-wrapper" class="hidden w-full h-full relative bg-black touch-none">
+        </div>
+
+        <div id="ui-layer" class="hidden absolute inset-0 pointer-events-none z-20">
+            <div class="absolute top-0 left-0 w-full h-1 md:h-2 bg-white/10">
+                <div id="progress-bar" class="h-full bg-gradient-to-r from-purple-500 to-pink-500 w-0 transition-all duration-300"></div>
+            </div>
+            
+            <div class="absolute bottom-6 md:bottom-10 left-0 w-full flex flex-col items-center justify-center gap-2 text-white/50 animate-bounce pointer-events-none">
+                <span class="text-[10px] md:text-xs uppercase tracking-widest bg-black/20 backdrop-blur-sm px-3 py-1 rounded-full">Swipe or Scroll</span>
+                <i class="fa-solid fa-chevron-down"></i>
+            </div>
+
+            <div id="dots-container" class="absolute right-4 md:right-8 top-1/2 -translate-y-1/2 flex flex-col gap-2 md:gap-3 pointer-events-auto">
+            </div>
+        </div>
+
+    </div>
+
+    <script>
+        let state = {
+            stats: null,
+            username: "",
+            uuid: "",
+            currentSlide: 0,
+            isAnimating: false,
+            slides: [],
+            touchStartY: 0,
+            touchEndY: 0,
+            isMuted: false
+        };
+
+        const audio = {
+            bg: document.getElementById('bg-music'),
+            slide: document.getElementById('sfx-slide'),
+            click: document.getElementById('sfx-click'),
+            
+            playBg: function() {
+                if(state.isMuted) return;
+                this.bg.volume = 0.01;
+                this.bg.play().catch(e => console.log("Autoplay prevented:", e));
+            },
+            
+            playSlide: function() {
+                if(state.isMuted) return;
+                this.slide.currentTime = 0;
+                this.slide.volume = 0.2;
+                this.slide.play().catch(() => {});
+            },
+            
+            playClick: function() {
+                if(state.isMuted) return;
+                this.click.currentTime = 0;
+                this.click.volume = 0.2;
+                this.click.play().catch(() => {});
+            },
+
+            toggle: function() {
+                state.isMuted = !state.isMuted;
+                const btn = document.getElementById('mute-btn');
+                if (state.isMuted) {
+                    this.bg.pause();
+                    btn.innerHTML = '<i class="fa-solid fa-volume-xmark"></i>';
+                    btn.classList.add('text-red-400');
+                } else {
+                    this.bg.play();
+                    btn.innerHTML = '<i class="fa-solid fa-volume-high"></i>';
+                    btn.classList.remove('text-red-400');
+                }
+            }
+        };
+
+        function toggleMute() {
+            audio.toggle();
+        }
+
+        function parseStats(data) {
+            const stats = data.stats || {};
+            const custom = stats["minecraft:custom"] || {};
+            const mined = stats["minecraft:mined"] || {};
+            const killed = stats["minecraft:killed"] || {};
+            const killedBy = stats["minecraft:killed_by"] || {};
+            const used = stats["minecraft:used"] || {};
+            const crafted = stats["minecraft:crafted"] || {};
+
+            const ticks = custom["minecraft:play_time"] || custom["minecraft:play_one_minute"] || 0;
+            const hours = Math.round(ticks / 20 / 3600);
+            const days = (hours / 24).toFixed(1);
+
+            const jumps = custom["minecraft:jump"] || 0;
+
+            const walkCm = custom["minecraft:walk_one_cm"] || 0;
+            const sprintCm = custom["minecraft:sprint_one_cm"] || 0;
+            const swimCm = custom["minecraft:swim_one_cm"] || 0;
+            const flyCm = custom["minecraft:fly_one_cm"] || 0;
+            const boatCm = custom["minecraft:boat_one_cm"] || 0;
+            const horseCm = custom["minecraft:horse_one_cm"] || 0;
+            const minecartCm = custom["minecraft:minecart_one_cm"] || 0;
+            const pigCm = custom["minecraft:pig_one_cm"] || 0;
+            
+            const totalCm = walkCm + sprintCm + swimCm + flyCm + boatCm + horseCm + minecartCm + pigCm;
+            const totalKm = Math.round(totalCm / 100000);
+
+            const deaths = custom["minecraft:deaths"] || 0;
+            const damageDealt = Math.round((custom["minecraft:damage_dealt"] || 0) / 10);
+            const damageTaken = Math.round((custom["minecraft:damage_taken"] || 0) / 10);
+            const timeSinceDeath = Math.round((custom["minecraft:time_since_death"] || 0) / 20 / 60);
+
+            const playerKills = custom["minecraft:player_kills"] || 0;
+            
+            let mobKills = 0;
+            if (Object.keys(killed).length > 0) {
+                Object.entries(killed).forEach(([key, val]) => {
+                    if (key.startsWith('minecraft:') && key !== 'minecraft:player') {
+                        mobKills += val;
+                    }
+                });
+            }
+
+            let mostMinedBlock = "Nothing";
+            let mostMinedCount = 0;
+            let totalMined = 0;
+            
+            if (Object.keys(mined).length > 0) {
+                Object.entries(mined).forEach(([key, val]) => {
+                    totalMined += val;
+                    if (val > mostMinedCount) {
+                        mostMinedCount = val;
+                        mostMinedBlock = key.replace('minecraft:', '').replace(/_/g, ' ');
+                    }
+                });
+            }
+            
+            let mostUsedItem = "Nothing";
+            let mostUsedCount = 0;
+            if (Object.keys(used).length > 0) {
+                Object.entries(used).forEach(([key, val]) => {
+                    if (val > mostUsedCount) {
+                        mostUsedCount = val;
+                        mostUsedItem = key.replace('minecraft:', '').replace(/_/g, ' ');
+                    }
+                });
+            }
+
+            const animalsFed = custom["minecraft:animals_fed"] || 0;
+
+            let mostCraftedItem = "Nothing";
+            let mostCraftedCount = 0;
+            let totalCrafted = 0;
+            if (Object.keys(crafted).length > 0) {
+                Object.entries(crafted).forEach(([key, val]) => {
+                    totalCrafted += val;
+                    if (val > mostCraftedCount) {
+                        mostCraftedCount = val;
+                        mostCraftedItem = key.replace('minecraft:', '').replace(/_/g, ' ');
+                    }
+                });
+            }
+
+            const animalsBred = custom["minecraft:animals_bred"] || 0;
+            const fishCaught = custom["minecraft:fish_caught"] || 0;
+            
+            let worstEnemy = "None";
+            let worstEnemyCount = 0;
+            if (Object.keys(killedBy).length > 0) {
+                Object.entries(killedBy).forEach(([key, val]) => {
+                    if (val > worstEnemyCount) {
+                        worstEnemyCount = val;
+                        worstEnemy = key.replace('minecraft:', '').replace(/_/g, ' ');
+                    }
+                });
+            }
+
+            const villagerTrades = custom["minecraft:traded_with_villager"] || 0;
+            const chestsOpened = custom["minecraft:open_chest"] || 0;
+            const enderChestsOpened = custom["minecraft:open_enderchest"] || 0;
+
+            return { 
+                hours, days, jumps, totalKm, 
+                deaths, damageDealt, damageTaken, timeSinceDeath,
+                mobKills, playerKills, 
+                animalsFed, mostCraftedItem, mostCraftedCount, totalCrafted,
+                mostMinedBlock, mostMinedCount, totalMined, 
+                mostUsedItem, mostUsedCount,
+                animalsBred, fishCaught,
+                worstEnemy, worstEnemyCount,
+                villagerTrades, chestsOpened, enderChestsOpened
+            };
+        }
+
+        function determineArchetype(stats) {
+
+            if (stats.totalKm > 1000) {
+                return { title: "Chunk Loader on Legs", desc: "The map wasn't big enough for you.", icon: "fa-map-location-dot", color: "text-cyan-400", border: "border-cyan-500" };
+            }
+
+            if (stats.deaths > 30) {
+                return { title: "Graveyard VIP Member", desc: "You spent a lot of time on the respawn screen.", icon: "fa-hospital", color: "text-pink-500", border: "border-pink-500" };
+            }
+            if (stats.playerKills > 10) {
+                return { title: "Kill Collector", desc: "You woke up and chose violence against your friends.", icon: "fa-khanda", color: "text-red-500", border: "border-red-500" };
+            }
+            if (stats.villagerTrades > 10000) {
+                return { title: "The Discount Hunter", desc: "Emeralds are your only friends.", icon: "fa-coins", color: "text-emerald-400", border: "border-emerald-500" };
+            }
+
+             if (stats.totalCrafted > 100000) {
+                return { title: "Inventory Flooder", desc: "Always crafting, never resting.", icon: "fa-gear", color: "text-zinc-400", border: "border-zinc-500" };
+            }
+            
+            if (stats.totalMined > 50000) {
+                return { title: "The Miner Minion", desc: "If there was a Block-Breakers Hall of Fame, you’d have your own planet.", icon: "fa-hammer", color: "text-amber-400", border: "border-amber-500" };
+            }
+            
+            if (stats.mobKills > 10000) {
+                return { title: "Mob Exterminator", desc: "Keeping the server safe, one mob at a time.", icon: "fa-skull", color: "text-orange-500", border: "border-orange-500" };
+            }
+            if (stats.chestsOpened > 3000) {
+                return { title: "Chest Addict", desc: "What's in the box?", icon: "fa-box-open", color: "text-yellow-600", border: "border-yellow-600" };
+            }
+            if (stats.enderChestsOpened > 1000) {
+                return { title: "Stash Master", desc: "Your inventory is never truly full.", icon: "fa-eye", color: "text-purple-500", border: "border-purple-500" };
+            }
+            
+            return { title: "The Generic Survivor", desc: "You played it safe and made it through the season.", icon: "fa-person-shelter", color: "text-blue-400", border: "border-blue-500" };
+        }
+
+        function generateSlides(stats, username) {
+            const archetype = determineArchetype(stats);
+            const headUrl = state.uuid ? `https://mc-heads.net/avatar/${state.uuid}/100` : `https://mc-heads.net/avatar/${username}/100`;
+
+            return [
+                {
+                    bg: "bg-gradient-to-br from-indigo-950 via-purple-900 to-black",
+                    html: `
+                        <div class="text-center w-full max-w-4xl px-4">
+                            <h2 class="text-xl md:text-2xl font-bold text-indigo-300 mb-6 tracking-[0.5em] uppercase animate-up">HauntedSMP S5</h2>
+                            <h1 class="text-5xl md:text-9xl font-black mb-6 leading-none animate-pop delay-100 break-words">
+                                HELLO<br>
+                                <span class="text-transparent bg-clip-text bg-gradient-to-r from-indigo-400 to-pink-500">${username}</span>
+                            </h1>
+                            <div class="mt-8 md:mt-12 animate-float delay-500">
+                                <i class="fa-solid fa-ghost text-7xl md:text-9xl text-indigo-500/20 blur-sm"></i>
+                            </div>
+                        </div>
+                    `
+                },
+                {
+                    bg: "bg-gradient-to-br from-pink-900 via-rose-950 to-black",
+                    html: `
+                        <div class="text-center w-full max-w-4xl px-4">
+                            <p class="text-2xl md:text-3xl text-pink-200 mb-4 font-light animate-up">You couldn't leave.</p>
+                            <div class="stat-huge text-white mb-2 animate-bounce-in delay-100 drop-shadow-[0_0_50px_rgba(236,72,153,0.5)]">
+                                ${stats.hours}
+                            </div>
+                            <p class="text-4xl md:text-6xl font-black text-pink-500 mb-8 md:mb-12 animate-up delay-200">HOURS</p>
+                            
+                            <div class="glass-card p-4 md:p-6 rounded-2xl inline-block animate-up delay-300">
+                                <p class="text-lg md:text-xl text-white/80">That's <span class="text-pink-400 font-bold">${stats.days} days</span> of your life.</p>
+                            </div>
+                        </div>
+                    `
+                },
+                {
+                    bg: "bg-gradient-to-br from-blue-900 via-cyan-900 to-black",
+                    html: `
+                        <div class="grid grid-cols-1 md:grid-cols-2 gap-8 md:gap-12 items-center max-w-5xl w-full px-6">
+                            <div class="text-center md:text-right space-y-4 animate-slide-left">
+                                <i class="fa-solid fa-person-running text-6xl md:text-8xl text-cyan-400 mb-2 md:mb-4"></i>
+                                <h2 class="text-3xl md:text-5xl font-bold text-white">THE ATHLETE</h2>
+                                <p class="text-lg md:text-xl text-cyan-200">You never stood still.</p>
+                            </div>
+                            <div class="space-y-4 md:space-y-6">
+                                <div class="bg-black/40 p-6 md:p-8 rounded-3xl border-l-4 md:border-l-8 border-cyan-500 animate-slide-right delay-200">
+                                    <p class="text-cyan-500 text-xs md:text-sm font-bold uppercase tracking-widest mb-1">Distance Traveled</p>
+                                    <p class="text-4xl md:text-6xl font-black text-white">${stats.totalKm.toLocaleString()} <span class="text-xl md:text-2xl">km</span></p>
+                                </div>
+                                <div class="bg-black/40 p-6 md:p-8 rounded-3xl border-l-4 md:border-l-8 border-blue-500 animate-slide-right delay-300">
+                                    <p class="text-blue-500 text-xs md:text-sm font-bold uppercase tracking-widest mb-1">Total Jumps</p>
+                                    <p class="text-4xl md:text-6xl font-black text-white">${stats.jumps.toLocaleString()}</p>
+                                </div>
+                            </div>
+                        </div>
+                    `
+                },
+                {
+                    bg: "bg-gradient-to-br from-orange-900 via-red-900 to-black",
+                    html: `
+                        <div class="text-center w-full max-w-4xl px-4">
+                            <h2 class="text-3xl md:text-4xl font-black text-orange-500 mb-8 md:mb-12 tracking-widest animate-up">COMBAT STYLE</h2>
+                            
+                            <div class="flex flex-col md:flex-row gap-6 md:gap-8 justify-center items-center">
+                                <div class="bg-white/5 p-6 md:p-10 rounded-[2rem] md:rounded-[3rem] w-full md:w-1/2 animate-slide-left delay-100 border border-red-500/30">
+                                    <i class="fa-solid fa-hand-fist text-4xl md:text-5xl text-red-500 mb-4 md:mb-6"></i>
+                                    <p class="text-4xl md:text-5xl font-black text-white mb-2">${stats.damageDealt.toLocaleString()}</p>
+                                    <p class="text-red-300 uppercase tracking-widest text-xs md:text-sm">Damage Dealt</p>
+                                </div>
+                                
+                                <div class="text-xl md:text-2xl font-bold text-white/20 animate-pop delay-200">VS</div>
+
+                                <div class="bg-white/5 p-6 md:p-10 rounded-[2rem] md:rounded-[3rem] w-full md:w-1/2 animate-slide-right delay-300 border border-orange-500/30">
+                                    <i class="fa-solid fa-shield-heart text-4xl md:text-5xl text-orange-500 mb-4 md:mb-6"></i>
+                                    <p class="text-4xl md:text-5xl font-black text-white mb-2">${stats.damageTaken.toLocaleString()}</p>
+                                    <p class="text-orange-300 uppercase tracking-widest text-xs md:text-sm">Damage Taken</p>
+                                </div>
+                            </div>
+                        </div>
+                    `
+                },
+                {
+                    bg: "bg-gradient-to-br from-teal-900 via-gray-900 to-black",
+                    html: `
+                        <div class="text-center w-full max-w-4xl px-4">
+                            <h2 class="text-3xl md:text-4xl font-black text-teal-400 mb-8 md:mb-12 tracking-widest animate-up">THE CRAFTER</h2>
+                            
+                            <div class="glass-card p-8 md:p-10 rounded-3xl max-w-lg mx-auto animate-bounce-in delay-100 border-b-4 border-teal-500">
+                                <i class="fa-solid fa-screwdriver-wrench text-4xl md:text-5xl text-teal-500 mb-4 md:mb-6"></i>
+                                <p class="text-xs md:text-sm text-zinc-400 uppercase font-bold mb-1">MOST CRAFTED ITEM</p>
+                                <p class="text-3xl md:text-5xl font-black text-white capitalize mb-1 break-words">${stats.mostCraftedItem}</p>
+                                <p class="text-sm md:text-md text-zinc-400 mt-4">Crafted ${stats.mostCraftedCount.toLocaleString()} times.</p>
+                            </div>
+                            
+                            <p class="mt-8 text-lg md:text-xl text-white/60 animate-up delay-200">
+                                Efficiency is key to survival.
+                            </p>
+                        </div>
+                    `
+                },
+                {
+                    bg: "bg-gradient-to-br from-red-950 via-black to-red-900",
+                    html: `
+                        <div class="relative text-center w-full px-4">
+                            <div class="absolute inset-0 flex items-center justify-center opacity-10 animate-spin-slow pointer-events-none">
+                                <i class="fa-solid fa-skull-crossbones text-[150px] md:text-[200px] text-white/10"></i>
+                            </div>
+                            
+                            <p class="text-red-500 tracking-[0.5em] md:tracking-[1em] font-bold mb-4 animate-up">THE SLAYER</p>
+                            <div class="stat-huge text-white mb-6 md:mb-8 animate-bounce-in delay-100">${(stats.mobKills + stats.playerKills).toLocaleString()}</div>
+                            <p class="text-xl md:text-3xl font-light text-red-200 mb-8 md:mb-12 animate-up delay-200">TOTAL ELIMINATIONS</p>
+
+                            <div class="inline-flex gap-6 md:gap-8">
+                                <div class="text-center animate-slide-left delay-300">
+                                    <p class="text-3xl md:text-4xl font-bold text-white">${stats.mobKills}</p>
+                                    <p class="text-xs text-zinc-500 uppercase">Mobs</p>
+                                </div>
+                                <div class="w-px bg-white/20"></div>
+                                <div class="text-center animate-slide-right delay-400">
+                                    <p class="text-3xl md:text-4xl font-bold ${stats.playerKills > 0 ? 'text-red-500' : 'text-zinc-500'}">${stats.playerKills}</p>
+                                    <p class="text-xs text-zinc-500 uppercase">Players</p>
+                                </div>
+                            </div>
+                        </div>
+                    `
+                },
+                {
+                    bg: "bg-gradient-to-br from-yellow-900 via-stone-900 to-black",
+                    html: `
+                        <div class="text-center w-full max-w-5xl px-6">
+                            <h2 class="text-3xl md:text-4xl font-black text-yellow-400 mb-8 md:mb-12 tracking-widest animate-up">THE GRIND</h2>
+                            
+                            <div class="grid grid-cols-1 md:grid-cols-2 gap-6 md:gap-8">
+                                <div class="glass-card p-8 md:p-10 rounded-3xl animate-slide-left delay-100 border-b-4 border-yellow-500">
+                                    <i class="fa-solid fa-gem text-4xl md:text-5xl text-yellow-500 mb-4 md:mb-6"></i>
+                                    <p class="text-xs md:text-sm text-zinc-400 uppercase font-bold mb-1">MOST MINED BLOCK</p>
+                                    <p class="text-3xl md:text-4xl font-black text-white capitalize mb-1 break-words">${stats.mostMinedBlock}</p>
+                                    <p class="text-xs md:text-sm text-zinc-400">${stats.mostMinedCount.toLocaleString()} units</p>
+                                </div>
+                                <div class="glass-card p-8 md:p-10 rounded-3xl animate-slide-right delay-200 border-b-4 border-stone-500">
+                                    <i class="fa-solid fa-layer-group text-4xl md:text-5xl text-stone-500 mb-4 md:mb-6"></i>
+                                    <p class="text-xs md:text-sm text-zinc-400 uppercase font-bold mb-1">TOTAL BLOCKS BROKEN</p>
+                                    <p class="text-3xl md:text-4xl font-black text-white capitalize mb-1">${stats.totalMined.toLocaleString()}</p>
+                                    <p class="text-xs md:text-sm text-zinc-400">You like clicking left mouse button.</p>
+                                </div>
+                            </div>
+                        </div>
+                    `
+                },
+                {
+                    bg: "bg-gradient-to-br from-orange-900 via-gray-900 to-black",
+                    html: `
+                        <div class="text-center w-full max-w-4xl px-4">
+                            <h2 class="text-3xl md:text-4xl font-black text-orange-400 mb-8 md:mb-12 tracking-widest animate-up">THE SCAVENGER</h2>
+                            
+                            <div class="glass-card p-8 md:p-10 rounded-3xl max-w-lg mx-auto animate-scale-rotate delay-100 border-t-4 border-orange-500">
+                                <i class="fa-solid fa-box-open text-4xl md:text-5xl text-orange-500 mb-4 md:mb-6 animate-float"></i>
+                                <p class="text-xs md:text-sm text-zinc-400 uppercase font-bold mb-1">CHESTS OPENED</p>
+                                <p class="text-5xl md:text-6xl font-black text-white capitalize mb-1">${stats.chestsOpened.toLocaleString()}</p>
+                                <p class="text-sm md:text-md text-zinc-400 mt-4">You sought out every treasure.</p>
+                            </div>
+                            
+                            <div class="mt-8 flex justify-center gap-4 animate-up delay-200">
+                                <div class="bg-white/5 px-6 py-3 rounded-xl">
+                                    <p class="text-xs text-orange-300 mb-1">Curiosity Level</p>
+                                    <p class="text-xl md:text-2xl font-bold text-white">${stats.chestsOpened > 1000 ? 'MAXIMUM' : stats.chestsOpened > 500 ? 'HIGH' : 'MODERATE'}</p>
+                                </div>
+                            </div>
+                        </div>
+                    `
+                },
+                {
+                    bg: "bg-gradient-to-br from-purple-950 via-gray-900 to-black",
+                    html: `
+                        <div class="text-center w-full max-w-4xl px-4">
+                            <h2 class="text-3xl md:text-4xl font-black text-purple-400 mb-8 md:mb-12 tracking-widest animate-up">THE INVENTORY MASTER</h2>
+                            
+                            <div class="glass-card p-8 md:p-10 rounded-3xl max-w-lg mx-auto animate-bounce-in delay-100 border-l-4 border-purple-500">
+                                <i class="fa-solid fa-cube text-4xl md:text-5xl text-purple-500 mb-4 md:mb-6"></i>
+                                <p class="text-xs md:text-sm text-zinc-400 uppercase font-bold mb-1">ENDER CHESTS OPENED</p>
+                                <p class="text-5xl md:text-6xl font-black text-white capitalize mb-1">${stats.enderChestsOpened.toLocaleString()}</p>
+                                <p class="text-sm md:text-md text-zinc-400 mt-4">A true master of inventory management.</p>
+                            </div>
+                        </div>
+                    `
+                },
+                {
+                    bg: "bg-gradient-to-br from-lime-900 via-green-900 to-black",
+                    html: `
+                        <div class="text-center w-full max-w-4xl px-4">
+                            <h2 class="text-3xl md:text-4xl font-black text-lime-400 mb-8 md:mb-12 tracking-widest animate-up">THE BUSINESS</h2>
+                            
+                            <div class="glass-card p-8 md:p-10 rounded-3xl max-w-lg mx-auto animate-scale-rotate delay-100 border-r-4 border-lime-500">
+                                <i class="fa-solid fa-coins text-4xl md:text-5xl text-lime-500 mb-4 md:mb-6"></i>
+                                <p class="text-xs md:text-sm text-zinc-400 uppercase font-bold mb-1">VILLAGER TRADES</p>
+                                <p class="text-5xl md:text-6xl font-black text-white capitalize mb-1">${stats.villagerTrades.toLocaleString()}</p>
+                                <p class="text-sm md:text-md text-zinc-400 mt-4">For the best deals, of course.</p>
+                            </div>
+                        </div>
+                    `
+                },
+                {
+                    bg: "bg-gradient-to-br from-indigo-900 via-gray-900 to-black",
+                    html: `
+                        <div class="text-center w-full max-w-5xl px-6">
+                            <h2 class="text-3xl md:text-4xl font-black text-indigo-400 mb-8 md:mb-12 tracking-widest animate-up">THE TOOLBOX</h2>
+                            
+                            <div class="glass-card p-8 md:p-10 rounded-3xl max-w-md mx-auto animate-bounce-in delay-100 border-t-4 border-indigo-500">
+                                <i class="fa-solid fa-hammer text-4xl md:text-5xl text-indigo-500 mb-4 md:mb-6"></i>
+                                <p class="text-xs md:text-sm text-zinc-400 uppercase font-bold mb-1">MOST USED ITEM</p>
+                                <p class="text-3xl md:text-5xl font-black text-white capitalize mb-1 break-words">${stats.mostUsedItem}</p>
+                                <p class="text-sm md:text-md text-zinc-400 mt-4">Used a total of ${stats.mostUsedCount.toLocaleString()} times.</p>
+                            </div>
+                            
+                            <p class="mt-8 text-lg md:text-xl text-white/60 animate-up delay-200">
+                                A tool for every job.
+                            </p>
+                        </div>
+                    `
+                },
+                {
+                    bg: "bg-gradient-to-t from-zinc-900 to-black",
+                    html: `
+                        <div class="flex flex-col items-center w-full px-4 text-center">
+                            <div class="relative mb-6 md:mb-8 animate-bounce-in">
+                                <i class="fa-solid fa-tombstone text-6xl md:text-8xl text-zinc-700"></i>
+                                <div class="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 bg-red-600 text-white w-10 h-10 md:w-12 md:h-12 flex items-center justify-center rounded-full font-black text-lg md:text-xl shadow-lg border-2 border-red-400 animate-pulse">
+                                    ${stats.deaths}
+                                </div>
+                            </div>
+                            <h2 class="text-4xl md:text-5xl font-black text-zinc-200 mb-2 animate-up delay-100">WASTED</h2>
+                            <p class="text-zinc-500 text-lg md:text-xl mb-8 md:mb-12 animate-up delay-200">You died ${stats.deaths} time${stats.deaths !== 1 ? 's' : ''} this season.</p>
+                            
+                            <div class="bg-red-900/20 border border-red-500/20 p-6 md:p-8 rounded-2xl text-center animate-slide-right delay-300 w-full max-w-md">
+                                <p class="text-red-400 text-[10px] md:text-xs font-bold uppercase tracking-widest mb-2">YOUR WORST NIGHTMARE</p>
+                                <p class="text-3xl md:text-4xl font-black text-white capitalize mb-1">${stats.worstEnemy}</p>
+                                <p class="text-sm text-zinc-400">Ended you ${stats.worstEnemyCount} time${stats.worstEnemyCount !== 1 ? 's' : ''}</p>
+                            </div>
+                        </div>
+                    `
+                },
+                {
+                    bg: "bg-gradient-to-br from-violet-950 via-fuchsia-950 to-black",
+                    html: `
+                        <div class="text-center w-full max-w-4xl px-4">
+                            <h2 class="text-xl md:text-2xl font-bold text-fuchsia-300 mb-6 md:mb-8 tracking-[0.3em] md:tracking-[0.5em] uppercase animate-up">YOUR ARCHETYPE</h2>
+                            
+                            <div class="relative group">
+                                <div class="absolute inset-0 bg-gradient-to-r from-fuchsia-600 to-violet-600 rounded-[3rem] blur-xl opacity-50 group-hover:opacity-100 transition-opacity duration-500 animate-pulse-glow"></div>
+                                
+                                <div class="relative bg-black/80 backdrop-blur-xl p-8 md:p-12 rounded-[2rem] md:rounded-[3rem] border-2 ${archetype.border} animate-scale-rotate delay-100">
+                                    <i class="fa-solid ${archetype.icon} text-6xl md:text-8xl ${archetype.color} mb-6 md:mb-8 animate-float"></i>
+                                    <h1 class="text-4xl md:text-7xl font-black text-white mb-4 tracking-tight break-words">${archetype.title}</h1>
+                                    <div class="w-24 md:w-32 h-1 bg-white/20 mx-auto mb-6"></div>
+                                    <p class="text-xl md:text-2xl text-zinc-300 font-light italic">"${archetype.desc}"</p>
+                                </div>
+                            </div>
+                        </div>
+                    `
+                },
+                {
+                    bg: "bg-black",
+                    html: `
+                        <div class="h-full flex flex-col justify-center items-center w-full px-4 overflow-y-auto py-10">
+                            <!-- Target for screenshot -->
+                            <div id="summary-card" class="glass-card p-6 md:p-8 rounded-[2rem] max-w-sm w-full text-center border-t-4 border-purple-500 shadow-2xl animate-scale-rotate bg-gray-900/90 relative z-10">
+                                <div class="relative w-20 h-20 md:w-24 md:h-24 mx-auto mb-4 animate-float">
+                                    <img src="${headUrl}" 
+                                         class="w-full h-full rounded-2xl shadow-lg border-2 border-white/20" 
+                                         alt="${username}" 
+                                         crossorigin="anonymous"
+                                         onerror="this.src='https://mc-heads.net/avatar/steve/100'">
+                                </div>
+                                <h2 class="text-2xl md:text-3xl font-black text-white mb-1 leading-none break-words">${username}</h2>
+                                <p class="text-[10px] md:text-xs text-purple-400 font-bold uppercase tracking-widest mb-2">HauntedSMP S5 Legend</p>
+                                <p class="text-[10px] text-zinc-500 uppercase tracking-widest mb-6 border border-zinc-700 rounded-full inline-block px-3 py-1">${archetype.title}</p>
+
+                                <div class="grid grid-cols-2 gap-3 mb-6 text-left">
+                                    <div class="bg-white/5 p-3 rounded-xl">
+                                        <p class="text-[8px] md:text-[10px] text-zinc-500 uppercase font-bold">Playtime</p>
+                                        <p class="text-base md:text-lg font-bold text-white">${stats.hours}h</p>
+                                    </div>
+                                    <div class="bg-white/5 p-3 rounded-xl">
+                                        <p class="text-[8px] md:text-[10px] text-zinc-500 uppercase font-bold">Distance</p>
+                                        <p class="text-base md:text-lg font-bold text-white">${stats.totalKm}km</p>
+                                    </div>
+                                    <div class="bg-white/5 p-3 rounded-xl">
+                                        <p class="text-[8px] md:text-[10px] text-zinc-500 uppercase font-bold">Player Kills</p>
+                                        <p class="text-base md:text-lg font-bold ${stats.playerKills > 0 ? 'text-red-500' : 'text-white'}">${stats.playerKills}</p>
+                                    </div>
+                                    <div class="bg-white/5 p-3 rounded-xl">
+                                        <p class="text-[8px] md:text-[10px] text-zinc-500 uppercase font-bold">Deaths</p>
+                                        <p class="text-base md:text-lg font-bold text-white">${stats.deaths}</p>
+                                    </div>
+                                </div>
+                                
+                                <div class="text-[10px] md:text-xs text-zinc-600 font-mono">hauntedsmp.eu</div>
+                            </div>
+
+                            <!-- Buttons (Not part of screenshot) -->
+                            <div class="flex flex-col gap-3 mt-8 w-full max-w-sm animate-up delay-200 z-10">
+                                <button onclick="downloadSummary()" class="w-full py-4 bg-purple-600 text-white font-bold rounded-xl hover:bg-purple-500 hover:scale-105 transition-all shadow-lg flex items-center justify-center gap-2 active:scale-95">
+                                    <i class="fa-solid fa-download"></i> Save Image
+                                </button>
+                                <button onclick="location.reload()" class="w-full py-4 bg-white/10 text-white font-bold rounded-xl hover:bg-white/20 transition-all uppercase tracking-widest text-sm active:scale-95">
+                                    <i class="fa-solid fa-rotate-right mr-2"></i> Replay
+                                </button>
+                            </div>
+                        </div>
+                    `
+                }
+            ];
+        }
+
+        function renderSlides() {
+            const wrapper = document.getElementById('slides-wrapper');
+            const dots = document.getElementById('dots-container');
+            
+            wrapper.innerHTML = state.slides.map((s, i) => `
+                <div id="slide-${i}" class="slide ${s.bg} ${i === 0 ? 'active' : 'next'}">
+                    ${s.html}
+                </div>
+            `).join('');
+
+            dots.innerHTML = state.slides.map((_, i) => `
+                <div class="w-2 h-2 md:w-3 md:h-3 rounded-full bg-white/20 cursor-pointer hover:bg-white transition-all ${i === state.currentSlide ? 'bg-white scale-125' : ''}" onclick="goToSlide(${i})"></div>
+            `).join('');
+            
+            updateProgressBar();
+        }
+
+        function updateSlidePosition() {
+            state.slides.forEach((_, i) => {
+                const el = document.getElementById(`slide-${i}`);
+                el.className = `slide ${state.slides[i].bg}`;
+                
+                if (i === state.currentSlide) el.classList.add('active');
+                else if (i < state.currentSlide) el.classList.add('prev');
+                else el.classList.add('next');
+            });
+            
+            const dots = document.getElementById('dots-container').children;
+            Array.from(dots).forEach((dot, i) => {
+                dot.className = `w-2 h-2 md:w-3 md:h-3 rounded-full transition-all cursor-pointer ${i === state.currentSlide ? 'bg-white scale-125' : 'bg-white/20 hover:bg-white'}`;
+            });
+
+            updateProgressBar();
+        }
+
+        function updateProgressBar() {
+            const progress = ((state.currentSlide + 1) / state.slides.length) * 100;
+            document.getElementById('progress-bar').style.width = `${progress}%`;
+        }
+
+        function goToSlide(idx) {
+            if (state.isAnimating || idx < 0 || idx >= state.slides.length) return;
+            
+            audio.playSlide();
+
+            state.isAnimating = true;
+            state.currentSlide = idx;
+            updateSlidePosition();
+            setTimeout(() => { state.isAnimating = false; }, 600); 
+        }
+
+        const slidesWrapper = document.getElementById('slides-wrapper');
+        
+        slidesWrapper.addEventListener('touchstart', (e) => {
+            state.touchStartY = e.touches[0].clientY;
+        }, { passive: true });
+
+        slidesWrapper.addEventListener('touchend', (e) => {
+            state.touchEndY = e.changedTouches[0].clientY;
+            handleSwipe();
+        }, { passive: true });
+
+        function handleSwipe() {
+            if (document.getElementById('slides-wrapper').classList.contains('hidden')) return;
+            
+            const diff = state.touchStartY - state.touchEndY;
+            const threshold = 50;
+
+            if (Math.abs(diff) > threshold) {
+                if (diff > 0) {
+                    goToSlide(state.currentSlide + 1);
+                } else {
+                    goToSlide(state.currentSlide - 1);
+                }
+            }
+        }
+
+        function downloadSummary() {
+            audio.playClick();
+            const element = document.getElementById("summary-card");
+            if (!element) return;
+
+            const clone = element.cloneNode(true);
+
+            clone.style.position = 'absolute';
+            clone.style.left = '-9999px';
+            clone.style.top = '0';
+            clone.style.transform = 'none';
+            clone.style.animation = 'none';
+            clone.style.width = '600px'; 
+            clone.style.maxWidth = 'none';
+            clone.style.margin = '0';
+            clone.style.padding = '3rem'; 
+            clone.style.borderRadius = '2rem';
+            
+            clone.style.background = '#0f0f12'; 
+            clone.style.backgroundImage = 'linear-gradient(135deg, #18181b 0%, #000000 100%)';
+            clone.style.boxShadow = 'none';
+            clone.style.border = '4px solid #8b5cf6'; 
+
+            const headContainer = clone.querySelector('.w-20.h-20, .w-24.h-24'); 
+            if (headContainer) {
+                headContainer.style.width = '120px';
+                headContainer.style.height = '120px';
+                headContainer.style.marginBottom = '20px';
+            }
+
+            const usernameTitle = clone.querySelector('h2');
+            if (usernameTitle) {
+                 usernameTitle.style.fontSize = '48px';
+                 usernameTitle.style.lineHeight = '1.2'; 
+                 usernameTitle.style.marginTop = '0';
+                 usernameTitle.style.marginBottom = '10px'; 
+            }
+
+            const subtitle = clone.querySelector('p.text-purple-400');
+            if (subtitle) {
+                subtitle.style.fontSize = '14px';
+                subtitle.style.letterSpacing = '4px';
+                subtitle.style.marginTop = '0';
+                subtitle.style.marginBottom = '10px';
+            }
+
+            const archetypeTag = clone.querySelector('p.border-zinc-700');
+            if (archetypeTag) {
+                archetypeTag.style.fontSize = '14px';
+                archetypeTag.style.padding = '8px 20px';
+                archetypeTag.style.marginBottom = '40px'; 
+            }
+
+            const statsGrid = clone.querySelector('.grid');
+            if (statsGrid) {
+                statsGrid.style.gap = '20px';
+                statsGrid.style.marginBottom = '30px';
+            }
+
+            const statBoxes = clone.querySelectorAll('.bg-white\\/5');
+            statBoxes.forEach(box => {
+                box.style.background = '#27272a';
+                box.style.padding = '20px';
+            });
+            
+            const statLabels = clone.querySelectorAll('.grid p.uppercase');
+            statLabels.forEach(label => label.style.fontSize = '12px');
+
+            const statValues = clone.querySelectorAll('.grid p.text-base');
+            statValues.forEach(val => val.style.fontSize = '24px');
+
+            document.body.appendChild(clone);
+
+            const images = clone.getElementsByTagName('img');
+            const imagePromises = Array.from(images).map(img => {
+                if (img.complete) return Promise.resolve();
+                return new Promise(resolve => { img.onload = resolve; img.onerror = resolve; });
+            });
+
+            Promise.all(imagePromises).then(() => {
+                html2canvas(clone, {
+                    backgroundColor: null,
+                    scale: 2, 
+                    useCORS: true,
+                    allowTaint: true,
+                    logging: false
+                }).then(canvas => {
+                    const link = document.createElement('a');
+                    link.download = `HauntedSMP_${state.username || 'Player'}_Stats.png`;
+                    link.href = canvas.toDataURL("image/png");
+                    link.click();
+                    document.body.removeChild(clone);
+                }).catch(err => {
+                    console.error("Screenshot failed:", err);
+                    document.body.removeChild(clone);
+                });
+            });
+        }
+
+        async function attemptAutoLoad() {
+            audio.playClick();
+            const usernameInput = document.getElementById('username-input').value.trim();
+            
+            if (!usernameInput) {
+                showError("Please enter a username!");
+                return;
+            }
+
+            showError("Searching PlayerDB...", "text-yellow-300");
+
+            try {
+                const res = await fetch(`https://playerdb.co/api/player/minecraft/${usernameInput}`);
+                const data = await res.json();
+                
+                if (!data.success) throw new Error("Player not found.");
+                
+                const uuid = data.data.player.id;
+                const realName = data.data.player.username;
+
+                showError("Found! Loading stats...", "text-blue-300");
+                
+                let statsData;
+                try {
+                      const statsRes = await fetch(`./stats/${uuid}.json`);
+                      if (!statsRes.ok) throw new Error("Stats file not found");
+                      statsData = await statsRes.json();
+                } catch(e) {
+                    console.log("No local stats found, using mock data for demo.");
+                   
+                }
+                
+                state.username = realName;
+                state.uuid = uuid;
+
+                startApp(statsData, realName);
+
+            } catch (err) {
+                console.error(err);
+                showError("Error: This person didn't play Haunted SMP S5!");
+            }
+        }
+
+        function showError(msg, color="text-red-300") {
+            const el = document.getElementById('error-msg');
+            el.className = `text-sm mt-6 font-bold bg-white/10 py-2 px-4 rounded-lg ${color}`;
+            el.innerText = msg;
+            el.classList.remove('hidden');
+        }
+
+        function startApp(data, username) {
+            audio.playBg();
+
+            const parsed = parseStats(data);
+            state.slides = generateSlides(parsed, username);
+            
+            renderSlides();
+
+            const login = document.getElementById('login-screen');
+            login.style.opacity = '0';
+            setTimeout(() => {
+                login.style.display = 'none';
+                document.getElementById('slides-wrapper').classList.remove('hidden');
+                document.getElementById('ui-layer').classList.remove('hidden');
+            }, 700);
+        }
+
+        window.addEventListener('wheel', (e) => {
+            if (document.getElementById('slides-wrapper').classList.contains('hidden')) return;
+            if (e.deltaY > 0) goToSlide(state.currentSlide + 1);
+            else goToSlide(state.currentSlide - 1);
+        });
+
+        window.addEventListener('keydown', (e) => {
+            if (document.getElementById('slides-wrapper').classList.contains('hidden')) {
+                if(e.key === "Enter") attemptAutoLoad();
+                return;
+            }
+            if (e.key === "ArrowDown" || e.key === "ArrowRight") goToSlide(state.currentSlide + 1);
+            if (e.key === "ArrowUp" || e.key === "ArrowLeft") goToSlide(state.currentSlide - 1);
+        });
+
+    </script>
+</body>
+</html>
